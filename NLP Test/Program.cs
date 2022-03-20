@@ -19,20 +19,70 @@ namespace Natural_Language_Processing_Test
             return text.Split(new char[] { '.', ',' });
         }
 
+        /// <summary>
+        /// split into words
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
         string[] tokenize(string line)
         {
             return line.Split(' ');
         }
 
+        /// <summary>
+        /// remove unnecessary options (and empty strings)
+        /// </summary>
+        /// <param name="tokens"></param>
+        /// <returns></returns>
         string[] removeStopwords(string[] tokens)
         {
             List<string> stopWords = new List<string>();
-            tokens.ToList().RemoveAll((t) => stopWords.FindIndex((n) => t == n) <= 0);
-            return tokens;
+
+            var list = tokens.ToList();
+            list.RemoveAll(t => t == " ");
+            list.RemoveAll(t => t == "");
+            list.RemoveAll((t) => stopWords.FindIndex((n) => t == n) <= 0);
+            return list.ToArray();
         }
 
+        /// <summary>
+        /// get the root word of the given words
+        /// </summary>
+        /// <param name="tokens"></param>
+        /// <returns></returns>
+        string[] stemWords(string[] tokens)
+        {
 
+            return null;
+        }
 
+        /// <summary>
+        /// gets the base word tenses  (i.e. (am, are, is) -> be)
+        /// </summary>
+        /// <returns></returns>
+        string[] lemmanize()
+        {
+
+            return null;
+        }
+
+        /// <summary>
+        /// gets if word is noun, verb etc. 
+        /// </summary>
+        /// <returns></returns>
+        string[] speachTag()
+        {
+
+            return null;
+        }
+
+        /// <summary>
+        /// not sure if I'll need this
+        /// </summary>
+        void addExtendedReferences()
+        {
+
+        }
         static void Main(string[] args)
         {
         }
