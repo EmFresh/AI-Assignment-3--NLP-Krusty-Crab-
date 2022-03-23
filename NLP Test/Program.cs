@@ -14,77 +14,113 @@ namespace Natural_Language_Processing_Test
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        string[] segmentation(string text)
+        static string[] segmentation(string text)
         {
-            return text.Split(new char[] { '.', ',' });
-        }
+            return text.Split(new char[] { '.' });
+        }//done
 
         /// <summary>
         /// split into words
         /// </summary>
         /// <param name="line"></param>
         /// <returns></returns>
-        string[] tokenize(string line)
+        static string[] tokenize(string line)
         {
-            return line.Split(' ');
-        }
+            return line.Split(new char[] { ' ', ',' });
+        }//done
 
         /// <summary>
         /// remove unnecessary options (and empty strings)
         /// </summary>
         /// <param name="tokens"></param>
         /// <returns></returns>
-        string[] removeStopwords(string[] tokens)
+        static string[] removeStopwords(string[] tokens)
         {
-            List<string> stopWords = new List<string>();
+            List<string> stopWords = new List<string>() { ",", "", "\n" };
 
             var list = tokens.ToList();
-            list.RemoveAll(t => t == " ");
-            list.RemoveAll(t => t == "");
-            list.RemoveAll((t) => stopWords.FindIndex((n) => t == n) <= 0);
+
+            list.RemoveAll(t => stopWords.FindIndex(s => t == s) >= 0);
             return list.ToArray();
-        }
+        }//done (needs extra data)
 
         /// <summary>
         /// get the root word of the given words
         /// </summary>
         /// <param name="tokens"></param>
         /// <returns></returns>
-        string[] stemWords(string[] tokens)
+        static string[] stemWords(string[] tokens)
         {
+            var list = tokens.ToList();
+            List<string> stemWords = new List<string>();
 
-            return null;
-        }
+            foreach(var stem in stemWords)
+            {
+                int index = 0;
+                if((index = list.FindIndex((k) => k.Contains(stem))) >= 0)
+                    list[index] = stem;
+            }
+            return list.ToArray();
+        }//testing
 
         /// <summary>
         /// gets the base word tenses  (i.e. (am, are, is) -> be)
         /// </summary>
         /// <returns></returns>
-        string[] lemmanize()
+        static string[] lemmanize()
         {
 
             return null;
-        }
+        }//wip
 
         /// <summary>
         /// gets if word is noun, verb etc. 
         /// </summary>
         /// <returns></returns>
-        string[] speachTag()
+        static string[] speachTag()
         {
 
             return null;
-        }
+        }//wip
 
         /// <summary>
         /// not sure if I'll need this
         /// </summary>
-        void addExtendedReferences()
+        static void addExtendedReferences()
         {
 
         }
+
+
         static void Main(string[] args)
         {
+            //First we segment the string in separate the string sections
+            var segments = segmentation("this is a line of text. it should have 2 segments, and 14 words");
+
+            //then get each word per section
+            List<string[]> tokenSentenceList = new List<string[]>();
+            foreach(var a in segments)
+                tokenSentenceList.Add(tokenize(a));
+
+            //remove any word that is unnecessary
+            for(int a = 0; a < tokenSentenceList.Count; ++a)
+                tokenSentenceList[a] = removeStopwords(tokenSentenceList[a]);
+
+
+             //we then find the base words if they can be found
+             for(int a = 0; a < tokenSentenceList.Count; ++a)
+                 tokenSentenceList[a] = stemWords(tokenSentenceList[a]);
+
+            int count = 0;
+            foreach(var sentence in tokenSentenceList)
+            {
+                foreach(var word in sentence)
+                    Console.Write($"[{count++}]{word} ");
+
+                Console.WriteLine("");
+            }
+
+            Console.ReadKey();
         }
     }
 }
