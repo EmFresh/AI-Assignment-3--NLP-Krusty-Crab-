@@ -30,10 +30,10 @@ namespace Natural_Language_Processing_Test
         // Get the stem of a word at least three letters long:
         public string StemWord(string word)
         {
-            if(string.IsNullOrWhiteSpace(word) || word.Length < 3)
+            if(string.IsNullOrWhiteSpace(word) || word.Length <= 3)
                 return word;
 
-            wordArray = word.ToCharArray();
+            wordArray = word.ToArray();
             stem = 0;
             end = word.Length - 1;
 
@@ -454,16 +454,13 @@ namespace Natural_Language_Processing_Test
         /// not sure if I'll need this
         /// </summary>
         static void addExtendedReferenceTags()
-        {
-
-
-        }
+        { }
 
 
         static void Main(string[] args)
         {
             //First we segment the string in separate the string sections
-            var segments = segmentation("I would like to buy a cheeseburger");
+            var segments = segmentation("I would like to buy a cheese burger");
 
             //then get each word per section
             List<string[]> tokenSentenceList = new List<string[]>();
