@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-
 using System.Text;
 using System.Threading.Tasks;
 
@@ -42,7 +41,7 @@ namespace Natural_Language_Processing_Test
             Step3();
             Step4();
             Step5();
-            Step6();
+            //   Step6();
 
             return new string(wordArray, 0, end + 1);
         }
@@ -313,7 +312,7 @@ namespace Natural_Language_Processing_Test
         /// <returns></returns>
         static string[] segmentation(string text)
         {
-            return text.Split(new char[] { '.' });
+            return text.Split(new string[] { " ", ".", ",", "\n", "\t" }, StringSplitOptions.RemoveEmptyEntries);
         }//done
 
         /// <summary>
@@ -338,13 +337,42 @@ namespace Natural_Language_Processing_Test
             foreach(string s1 in lemDic)
                 stopWords.Add(s1);
 
+            List<string> noRemove = new List<string> {
+                "not",
+                "don't",
+                "away",
+                "Yes       ",
+                "Yea       ",
+                "Yeah      ",
+                "Yep       ",
+                "Sure      ",
+                "Great     ",
+                "No        ",
+                "Not today ",
+                "Nah       ",
+                "Nope      ",
+                "Add       ",
+                "And       ",
+                "Also      ",
+                "Plus      ",
+                "Have      ",
+                "Order     ",
+                "Remove    ",
+                "Delete    ",
+                "Subtract  ",
+                "Minus     ",
+                "Erase     ",
+                "No        ",
 
+            };
+
+            stopWords.RemoveAll(k => noRemove.FindIndex(l => k.Trim().ToLower() == l.Trim().ToLower()) >= 0);
 
             var list = tokens.ToList();
 
             list.RemoveAll(t => stopWords.FindIndex(s => t.Trim().ToLower() == s.Trim().ToLower()) >= 0);
             return list.ToArray();
-        }//done (needs extra data)
+        }//done 
 
 
 
@@ -359,6 +387,35 @@ namespace Natural_Language_Processing_Test
             var list = tokens.ToList();
             List<string> stemWords = new List<string>();
             int index = -1;
+            List<string> noRemove = new List<string> {
+                "not",
+                "don't",
+                "away",
+                "Yes       ",
+                "Yea       ",
+                "Yeah      ",
+                "Yep       ",
+                "Sure      ",
+                "Great     ",
+                "No        ",
+                "Not today ",
+                "Nah       ",
+                "Nope      ",
+                "Add       ",
+                "And       ",
+                "Also      ",
+                "Plus      ",
+                "Have      ",
+                "Order     ",
+                "Remove    ",
+                "Delete    ",
+                "Subtract  ",
+                "Minus     ",
+                "Erase     ",
+                "No        ",
+
+            };
+
 
 
             foreach(var stem in stemWords)
@@ -366,10 +423,11 @@ namespace Natural_Language_Processing_Test
                     list[index] = stem;
 
             for(index = 0; index < list.Count; ++index)
-                list[index] = prefixStrip(suffixStrip(list[index]));
+                if(noRemove.FindIndex(t => t.Trim().ToLower() == list[index].Trim().ToLower()) < 0)
+                    list[index] = prefixStrip(suffixStrip(list[index]));
 
             return list.ToArray();
-        }//done (needs extra data)
+        }//done 
 
         static string suffixStrip(string word)
         {
@@ -435,19 +493,35 @@ namespace Natural_Language_Processing_Test
         }//testing
 
         /// <summary>
-        /// gets if word is noun, verb etc. 
+        /// checks for tag for each word etc. 
         /// </summary>
         /// <returns></returns>
-        static List<(string, string[])> speachTag()
+        static List<(string, string[])> speachTag(string[] words)
         {
-            List<(string, string)> lemmanizeWords = new List<(string, string)>()
+            List<(string, string)> wordTags = new List<(string, string)>();
+
+            var speachTags = File.ReadAllLines("word_tags.txt");
+            string tag = "";
+            foreach(string s1 in speachTags)
             {
+                if(s1.Contains(':'))
+                {
+                    tag = s1.Substring(0, s1.IndexOf(':'));
+                    continue;
+                }
+                wordTags.Add((s1.Trim().ToLower(), tag));
+            }
+            List<(string, string[])> result = new List<(string, string[])>();
+            foreach(string s1 in words)
+            {
+                List<string> tmp = new List<string>();
+                foreach(var wtag in wordTags)
+                    if(wtag.Item1 == s1.Trim().ToLower())
+                        tmp.Add(wtag.Item2);
 
-            };
-
-
-
-            return null;
+                result.Add((s1, tmp.ToArray()));
+            }
+            return result;
         }//wip
 
         /// <summary>
@@ -457,10 +531,201 @@ namespace Natural_Language_Processing_Test
         { }
 
 
+        public interface ISentenceCheck
+        {
+            /// <summary>
+            /// returns probability this is a matching sentence using Naive Bayes Algo.
+            /// </summary>
+            /// <param name="sentence"></param>
+            /// <returns></returns>
+            float Check(List<(string, string[])> sentence, float prob);
+            float probability { get; }
+            Dictionary<string, float> probabilityWeights { get; }
+
+
+        }
+
+        /// <summary>
+        /// weather or not it's a food order
+        /// </summary>
+        public class Ordering : ISentenceCheck
+        {
+            public float probability => myProb;
+
+            public Dictionary<string, float> probabilityWeights => new Dictionary<string, float> {
+                {"food",0.9f },
+                {"accept",0.0f },
+                {"deny",0.0f },
+                {"add",0.1f },
+                {"remove",0.0f },
+
+            };
+            float myProb;
+            public Ordering(List<(string, string[])> sentence, float prob = 1)
+            {
+                myProb = Check(sentence, prob);
+            }
+            ///<inheritdoc/>
+            public float Check(List<(string, string[])> sentence, float prob)
+            {
+                float val = prob;
+
+                const float bias = .001f;
+                foreach(var weight in probabilityWeights)
+                {
+                    float times = sentence.FindAll(t => Array.FindIndex(t.Item2, u => u.ToLower() == weight.Key) >= 0).Count;
+                    val *= weight.Value * times + bias;
+                }
+                return val;
+            }
+        }
+
+        /// <summary>
+        /// Are you canceling the order 
+        /// </summary>
+        public class CancelOrder : ISentenceCheck
+        {
+
+            public float probability => myProb;
+
+            public Dictionary<string, float> probabilityWeights => new Dictionary<string, float> {
+                {"food",0.4f },
+                {"accept",0.0f },
+                {"deny",0.6f },
+                {"add",0 },
+                {"remove",0 },
+            };
+
+            float myProb;
+            public CancelOrder(List<(string, string[])> sentence, float prob = 1)
+            {
+                myProb = Check(sentence, prob);
+            }
+            ///<inheritdoc/>
+            public float Check(List<(string, string[])> sentence, float prob)
+            {
+                float val = prob;
+
+                const float bias = .001f;
+                foreach(var weight in probabilityWeights)
+                {
+                    float times = sentence.FindAll(t => Array.FindIndex(t.Item2, u => u.ToLower() == weight.Key) >= 0).Count;
+                    val *= weight.Value * times + bias;
+                }
+                return val;
+            }
+        }
+
+        public class AddToOrder : ISentenceCheck
+        {
+            public float probability => myProb;
+
+            public Dictionary<string, float> probabilityWeights => new Dictionary<string, float> {
+                {"food",0.7f },
+                {"accept",0.0f },
+                {"deny",0.0f },
+                {"add",0.3f },
+                {"remove",0.0f},
+            };
+
+            float myProb;
+            public AddToOrder(List<(string, string[])> sentence, float prob = 1)
+            {
+                myProb = Check(sentence, prob);
+            }
+
+            ///<inheritdoc/>
+            public float Check(List<(string, string[])> sentence, float prob)
+            {
+                float val = prob;
+
+                const float bias = .001f;
+                foreach(var weight in probabilityWeights)
+                {
+                    float times = sentence.FindAll(t => Array.FindIndex(t.Item2, u => u.ToLower() == weight.Key) >= 0).Count;
+                    val *= weight.Value * times + bias;
+                }
+                return val;
+            }
+        }
+
+        public class RemoveFromOrder : ISentenceCheck
+        {
+            public float probability => myProb;
+
+            public Dictionary<string, float> probabilityWeights => new Dictionary<string, float> {
+                {"food",0.7f },
+                {"accept",0.0f },
+                {"deny",0.0f },
+                {"add",0.0f },
+                {"remove",0.3f},
+            };
+            float myProb;
+            public RemoveFromOrder(List<(string, string[])> sentence, float prob = 1)
+            {
+                myProb = Check(sentence, prob);
+            }
+
+            ///<inheritdoc/>
+            public float Check(List<(string, string[])> sentence, float prob)
+            {
+                float val = prob;
+
+                const float bias = .001f;
+                foreach(var weight in probabilityWeights)
+                {
+                    float times = sentence.FindAll(t => Array.FindIndex(t.Item2, u => u.ToLower() == weight.Key) >= 0).Count;
+                    val *= weight.Value * times + bias;
+                }
+                return val;
+            }
+        }
+
+        public class ConfirmOrder : ISentenceCheck
+        {
+            public float probability => myProb;
+            float myProb;
+            public Dictionary<string, float> probabilityWeights => new Dictionary<string, float> {
+                {"food",0.0f },
+                {"accept",1.0f },
+                {"deny",0.0f },
+                {"add",0.0f },
+                {"remove",0.0f},
+            };
+
+            public ConfirmOrder(List<(string, string[])> sentence, float prob = 1)
+            {
+                myProb = Check(sentence, prob);
+            }
+            public float Check(List<(string, string[])> sentence, float prob)
+            {
+                float val = prob;
+
+                const float bias = .001f;
+                foreach(var weight in probabilityWeights)
+                {
+                    float times = sentence.FindAll(t => Array.FindIndex(t.Item2, u => u.ToLower() == weight.Key) >= 0).Count;
+                    val *= weight.Value * times + bias;
+                }
+                return val;
+            }
+        }
+
+        enum AIState
+        {
+            Greeting,
+            TakingOrder,
+            ConfirmingOrder,
+            Goodbye
+        }
+
+        AIState krustyKrabAI = AIState.Greeting;
         static void Main(string[] args)
         {
+
+
             //First we segment the string in separate the string sections
-            var segments = segmentation("I would like to buy a cheese burger");
+            var segments = segmentation("take away the burger");
 
             //then get each word per section
             List<string[]> tokenSentenceList = new List<string[]>();
@@ -480,14 +745,34 @@ namespace Natural_Language_Processing_Test
             for(int a = 0; a < tokenSentenceList.Count; ++a)
                 tokenSentenceList[a] = lemmanize(tokenSentenceList[a]);
 
+            List<List<(string, string[])>> tagedWords = new List<List<(string, string[])>>();
+            for(int a = 0; a < tokenSentenceList.Count; ++a)
+                tagedWords.Add(speachTag(tokenSentenceList[a]));
+
+            float p1=0, p2=0;
+            for(int a = 0; a < tagedWords.Count; ++a)
+            {
+                ISentenceCheck tmp = new Ordering(tagedWords[a]);
+
+                p1 = tmp.probability;
+                 tmp = new RemoveFromOrder(tagedWords[a]);
+                p2 = tmp.probability;
+            }
+
+            //print result
             int count = 0;
-            foreach(var sentence in tokenSentenceList)
+            foreach(var sentence in tagedWords)
             {
                 foreach(var word in sentence)
-                    Console.Write($"[{count++}]{word} ");
-
-                Console.WriteLine("");
+                {
+                    Console.Write($"[{count++}]{word.Item1}");
+                    foreach(var item in word.Item2)
+                        Console.Write($"({item}), ");
+                }
             }
+                Console.WriteLine("");
+                Console.WriteLine($"probability 1: {p1}");
+                Console.WriteLine($"probability 2: {p2}");
 
             Console.ReadKey();
         }
