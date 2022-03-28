@@ -312,7 +312,7 @@ namespace Natural_Language_Processing_Test
         /// <returns></returns>
         static string[] segmentation(string text)
         {
-            return text.Split(new string[] { " ", ".", ",", "\n", "\t" }, StringSplitOptions.RemoveEmptyEntries);
+            return text.Split(new string[] { ".", "\n", "\t" }, StringSplitOptions.RemoveEmptyEntries);
         }//done
 
         /// <summary>
@@ -373,8 +373,6 @@ namespace Natural_Language_Processing_Test
             list.RemoveAll(t => stopWords.FindIndex(s => t.Trim().ToLower() == s.Trim().ToLower()) >= 0);
             return list.ToArray();
         }//done 
-
-
 
 
         /// <summary>
@@ -592,8 +590,8 @@ namespace Natural_Language_Processing_Test
                 {"food",0.4f },
                 {"accept",0.0f },
                 {"deny",0.6f },
-                {"add",0 },
-                {"remove",0 },
+                {"add",0.0f },
+                {"remove",0.0f },
             };
 
             float myProb;
@@ -720,6 +718,52 @@ namespace Natural_Language_Processing_Test
         }
 
         AIState krustyKrabAI = AIState.Greeting;
+
+
+        public static List<(string, string[])> ProcessSentence(string text)
+        {
+
+            //First we segment the string in separate the string sections
+            var segments = segmentation("take away the burger");
+
+            //then get each word per section
+            List<string[]> tokenSentenceList = new List<string[]>();
+            foreach(var a in segments)
+                tokenSentenceList.Add(tokenize(a));
+
+            //remove any word that is unnecessary
+            for(int a = 0; a < tokenSentenceList.Count; ++a)
+                tokenSentenceList[a] = removeStopwords(tokenSentenceList[a]);
+
+
+            //we then find the base words if they can be found
+            for(int a = 0; a < tokenSentenceList.Count; ++a)
+                tokenSentenceList[a] = stemWords(tokenSentenceList[a]);
+
+            //consolidate works with the same meaning
+            for(int a = 0; a < tokenSentenceList.Count; ++a)
+                tokenSentenceList[a] = lemmanize(tokenSentenceList[a]);
+
+            List<List<(string, string[])>> tagedWords = new List<List<(string, string[])>>();
+            for(int a = 0; a < tokenSentenceList.Count; ++a)
+                tagedWords.Add(speachTag(tokenSentenceList[a]));
+
+            float p1 = 0, p2 = 0;
+            for(int a = 0; a < tagedWords.Count; ++a)
+            {
+                ISentenceCheck
+                    tmp = new Ordering(tagedWords[a]);
+
+                p1 = tmp.probability;
+                tmp = new RemoveFromOrder(tagedWords[a]);
+                p2 = tmp.probability;
+            }
+
+            if(tagedWords.Count > 0)
+                return tagedWords[0];
+
+            return new List<(string, string[])>();
+        }
         static void Main(string[] args)
         {
 
@@ -749,30 +793,31 @@ namespace Natural_Language_Processing_Test
             for(int a = 0; a < tokenSentenceList.Count; ++a)
                 tagedWords.Add(speachTag(tokenSentenceList[a]));
 
-            float p1=0, p2=0;
+            float p1 = 0, p2 = 0;
             for(int a = 0; a < tagedWords.Count; ++a)
             {
                 ISentenceCheck tmp = new Ordering(tagedWords[a]);
 
                 p1 = tmp.probability;
-                 tmp = new RemoveFromOrder(tagedWords[a]);
+                tmp = new RemoveFromOrder(tagedWords[a]);
                 p2 = tmp.probability;
             }
 
             //print result
-            int count = 0;
             foreach(var sentence in tagedWords)
             {
+                int count = 0;
                 foreach(var word in sentence)
                 {
                     Console.Write($"[{count++}]{word.Item1}");
                     foreach(var item in word.Item2)
                         Console.Write($"({item}), ");
                 }
-            }
                 Console.WriteLine("");
                 Console.WriteLine($"probability 1: {p1}");
                 Console.WriteLine($"probability 2: {p2}");
+            }
+            // Console.WriteLine("");
 
             Console.ReadKey();
         }
